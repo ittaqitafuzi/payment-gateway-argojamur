@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Pesanan;
 use App\Models\Produk;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Auth;
 
-class pesananController extends Controller
+class PesananController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -104,4 +105,57 @@ class pesananController extends Controller
         $pesanan->delete();
         return redirect()->route('pesanan.index')->with('success', 'Pesanan berhasil dihapus.');
     }
-}
+
+    /**
+     * Get data from external API.
+     */
+    public function getApiData()
+    {
+        $response = Http::get('https://toxicshrooms.vercel.app/');
+
+         if ($response->successful()) {
+        $json = $response->json();
+        $data = $json['data'] ?? []; 
+    } else {
+        $data = [];
+    }
+
+        return view('pesanan.api', compact('data'));
+    }
+
+    /**
+     * Beli Sekarang — buat pesanan + langsung ke halaman payment
+     */
+    public function buyNow(Request $request)
+    {
+        $request->validate([
+            'produk_id' => 'required|exists:produk,id',
+            'jumlah'    => 'required|integer|min:1',
+            'alamat_pengiriman' => 'required|string|max:500',
+        ]);
+
+        $produk = Produk::findOrFail($request->produk_id);
+
+        // Cek stok
+        if ($produk->stok < $request->jumlah) {
+            return back()->with('error', 'Stok tidak mencukupi! Stok tersedia: ' . $produk->stok);
+        }
+
+        $total_harga = $produk->harga * $request->jumlah;
+
+        // Buat pesanan baru
+        $pesanan = Pesanan::create([
+            'user_id'           => Auth::id() ?? 1, // default user 1 jika belum login
+            'produk_id'         => $request->produk_id,
+            'jumlah'            => $request->jumlah,
+            'total_harga'       => $total_harga,
+            'status'            => 'tertunda',
+            'alamat_pengiriman' => $request->alamat_pengiriman,
+            'payment_status'    => 'belum_bayar',
+        ]);
+
+        // Langsung redirect ke halaman checkout pembayaran
+        return redirect()->route('payment.checkout', $pesanan->id)
+            ->with('success', 'Pesanan berhasil dibuat! Silakan lanjutkan pembayaran.');
+    }
+}

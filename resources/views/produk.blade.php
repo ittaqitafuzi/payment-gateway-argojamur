@@ -138,33 +138,123 @@
     </div>
 </div>
 
+<!-- ===== MODAL BELI SEKARANG ===== -->
+<div id="buyNowModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:20px; padding:36px; max-width:480px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; animation: slideUp 0.3s ease;">
+        <button onclick="closeBuyNow()" style="position:absolute;top:16px;right:20px;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;">✕</button>
+
+        <h3 style="font-size:1.3rem;font-weight:800;color:#1b4332;margin-bottom:4px;">🛒 Beli Sekarang</h3>
+        <p style="color:#888;font-size:0.9rem;margin-bottom:24px;">{{ $produk->nama }}</p>
+
+        <form id="buyNowForm" action="{{ route('pesanan.buyNow') }}" method="POST">
+            @csrf
+            <input type="hidden" name="produk_id" value="{{ $produk->id }}">
+            <input type="hidden" name="jumlah" id="formJumlah" value="1">
+
+            <!-- Jumlah -->
+            <div style="margin-bottom:18px;">
+                <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;">Jumlah Pesanan</label>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button type="button" onclick="modalDecr()" style="width:40px;height:40px;border-radius:10px;border:2px solid #52b788;background:white;font-size:1.2rem;font-weight:700;cursor:pointer;color:#2d6a4f;">−</button>
+                    <span id="modalQtyDisplay" style="font-size:1.3rem;font-weight:800;color:#1b4332;min-width:32px;text-align:center;">1</span>
+                    <button type="button" onclick="modalIncr()" style="width:40px;height:40px;border-radius:10px;border:2px solid #52b788;background:white;font-size:1.2rem;font-weight:700;cursor:pointer;color:#2d6a4f;">+</button>
+                    <span style="color:#888;font-size:0.85rem;">Stok: {{ $produk->stok }}</span>
+                </div>
+            </div>
+
+            <!-- Alamat -->
+            <div style="margin-bottom:24px;">
+                <label style="display:block;font-weight:700;color:#333;margin-bottom:8px;">📍 Alamat Pengiriman</label>
+                <textarea name="alamat_pengiriman" rows="3" required placeholder="Masukkan alamat lengkap pengiriman..."
+                    style="width:100%;border:2px solid #e0e0e0;border-radius:10px;padding:12px;font-size:0.9rem;resize:none;outline:none;transition:0.2s;"
+                    onfocus="this.style.borderColor='#52b788'" onblur="this.style.borderColor='#e0e0e0'"></textarea>
+            </div>
+
+            <!-- Total Preview -->
+            <div style="background:#d8f3dc;border-radius:12px;padding:14px 18px;display:flex;justify-content:space-between;margin-bottom:20px;">
+                <span style="font-weight:700;color:#2d6a4f;">Total Bayar</span>
+                <span id="modalTotal" style="font-weight:800;color:#1b4332;font-size:1.1rem;">Rp {{ number_format($produk->harga, 0, ',', '.') }}</span>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" style="width:100%;padding:15px;background:linear-gradient(135deg,#2d6a4f,#52b788);color:white;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 15px rgba(45,106,79,0.4);transition:0.3s;"
+                onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                💳 Lanjut ke Pembayaran
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity:0; }
+    to   { transform: translateY(0); opacity:1; }
+}
+</style>
+
 <script>
 const maxQty = {{ $produk->stok }};
+const harga  = {{ $produk->harga }};
+let modalQty = 1;
 
 function increaseQty() {
     const input = document.getElementById('quantity');
-    if (parseInt(input.value) < maxQty) {
-        input.value = parseInt(input.value) + 1;
-    }
+    if (parseInt(input.value) < maxQty) input.value = parseInt(input.value) + 1;
 }
 
 function decreaseQty() {
     const input = document.getElementById('quantity');
-    if (parseInt(input.value) > 1) {
-        input.value = parseInt(input.value) - 1;
-    }
+    if (parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
 }
 
 function addToCart() {
-    const qty = document.getElementById('quantity').value;
-    // TODO: Implementasi add to cart
-    alert(`Menambahkan ${qty} item ke keranjang`);
+    alert('Fitur keranjang belum tersedia. Gunakan Beli Sekarang!');
 }
 
+// === Modal Buy Now ===
 function buyNow() {
-    const qty = document.getElementById('quantity').value;
-    // TODO: Implementasi buy now
-    alert(`Membeli ${qty} item`);
+    // Ambil qty dari input halaman
+    modalQty = parseInt(document.getElementById('quantity').value) || 1;
+    document.getElementById('modalQtyDisplay').textContent = modalQty;
+    document.getElementById('formJumlah').value = modalQty;
+    updateModalTotal();
+
+    const modal = document.getElementById('buyNowModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
+
+function closeBuyNow() {
+    document.getElementById('buyNowModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function modalIncr() {
+    if (modalQty < maxQty) {
+        modalQty++;
+        document.getElementById('modalQtyDisplay').textContent = modalQty;
+        document.getElementById('formJumlah').value = modalQty;
+        updateModalTotal();
+    }
+}
+
+function modalDecr() {
+    if (modalQty > 1) {
+        modalQty--;
+        document.getElementById('modalQtyDisplay').textContent = modalQty;
+        document.getElementById('formJumlah').value = modalQty;
+        updateModalTotal();
+    }
+}
+
+function updateModalTotal() {
+    const total = modalQty * harga;
+    document.getElementById('modalTotal').textContent = 'Rp ' + total.toLocaleString('id-ID');
+}
+
+// Tutup modal jika klik di luar
+document.getElementById('buyNowModal').addEventListener('click', function(e) {
+    if (e.target === this) closeBuyNow();
+});
 </script>
-@endsection
+@endsection

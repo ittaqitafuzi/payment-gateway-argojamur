@@ -12,6 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Webhook dari Midtrans — tidak ada CSRF token
+        'payment/notification',
     ];
 }
